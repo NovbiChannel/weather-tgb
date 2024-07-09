@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 val jvmTargetVersion = JavaVersion.VERSION_11
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -28,9 +30,9 @@ tasks {
     compileJava {
         targetCompatibility = jvmTargetVersion.majorVersion
     }
-    compileKotlin {
-        kotlinOptions {
-            jvmTarget = jvmTargetVersion.majorVersion
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_11)
             javaParameters = true
         }
     }
