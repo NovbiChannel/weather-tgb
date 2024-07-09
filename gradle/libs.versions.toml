@@ -1,0 +1,25 @@
+[versions]
+kotlin = "2.0.0"
+ktor = "2.3.12"
+tg_bot = "6.2.0"
+ksp_version = "2.0.0-1.0.22"
+
+[libraries]
+##ktor client
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+ktor-client-ws = { module = "io.ktor:ktor-client-websockets", version.ref = "ktor" }
+ktor-client-contentNegotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
+
+#ktor common
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+
+#telegram-bot
+eu-vendeli-telegramBot = { module = "eu.vendeli:telegram-bot", version.ref = "tg_bot" }
+eu-vendeli-ksp = { module = "eu.vendeli:ksp", version.ref = "tg_bot" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp_version" }
