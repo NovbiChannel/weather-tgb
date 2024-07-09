@@ -4,62 +4,86 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import org.novbicreate.common.connectionErrorMessage
+import org.novbicreate.common.illegalArgumentErrorMessage
+import org.novbicreate.common.timeoutErrorMessage
+import org.novbicreate.common.unknownError
+import org.novbicreate.domain.ApiRoutes.GET_WEATHER
 import org.novbicreate.domain.ApiRoutes.POST_ERROR
 import org.novbicreate.domain.ApiRoutes.POST_EVENT
 import org.novbicreate.domain.models.ErrorData
 import org.novbicreate.domain.models.EventData
 import org.novbicreate.domain.models.WeatherData
-import org.novbicreate.utils.Resource
 import java.net.ConnectException
 import java.util.concurrent.TimeoutException
 
 class ApiRepositoryImpl(private val client: HttpClient): ApiRepository {
-    companion object {
-        private const val LANGUAGE = "language"
-        private const val CITY = "city"
-    }
-    override suspend fun getWeather(city: String): Resource<WeatherData> {
+
+    override suspend fun handleWeatherMessage(city: String): String {
         return try {
-            Resource.Success(data = client.get(ApiRoutes.GET_WEATHER) {
-                parameter(LANGUAGE, "russian")
-                parameter(CITY, city)
-            }.body())
+            val weather = client.get(GET_WEATHER) {
+                parameter("language", "russian")
+                parameter("city", city)
+            }.body<WeatherData>()
+            sendEventToMetric("Запрошена погода для города $city")
+            handleWeatherMessage(weather)
         } catch (e: Exception) {
-            e.printStackTrace()
             sendErrorToMetric(e)
-            val message = when (e) {
-                is ConnectException -> "Связь с сервером потеряна, попробуйте поже"
-                is TimeoutException -> "Время ожидания ответа от сервера истекло. Пожалуйста, попробуйте еще раз."
-                is IllegalArgumentException -> "Я не знаю такого города. Пожалуйста, проверьте название города и попробуйте еще раз."
-                else -> "Извините, я не понял. Пожалуйста, отправьте название города, где вы хотите узнать погоду."
-            }
-            Resource.Error(message)
+            handleErrorMessage(e)
         }
     }
 
-    override suspend fun sendEvent(details: String) {
-        client.post(POST_EVENT) {
-            contentType(ContentType.Application.Json)
-            setBody(
-                EventData(
-                    type = "client",
-                    source = "weather_tg_bot",
-                    time = System.currentTimeMillis(),
-                    details = details
-                )
-            )
+    private fun handleWeatherMessage(weather: WeatherData): String {
+        val conditions = weather.conditions.replaceFirstChar { it.uppercase() }
+        val temperature = "${weather.temperature}°C"
+        val humidity = "Влажность ${weather.humidity}%"
+        val windSpeed = if (weather.windSpeed!= 0) ", ветер ${weather.windSpeed} м/с" else ""
+        return "Погода в городе ${weather.city}: $conditions $temperature. $humidity$windSpeed"
+    }
+
+    private fun handleErrorMessage(e: Exception): String {
+        e.printStackTrace()
+        return when (e) {
+            is ConnectException -> connectionErrorMessage
+            is TimeoutException -> timeoutErrorMessage
+            is IllegalArgumentException -> illegalArgumentErrorMessage
+            else -> unknownError
         }
     }
 
     private suspend fun sendErrorToMetric(e: Exception) {
-        client.post(POST_ERROR) {
-            contentType(ContentType.Application.Json)
-            setBody(ErrorData(
-                type = "client",
-                source = "weather_tg_bot",
-                time = System.currentTimeMillis(),
-                description = e.localizedMessage
-            ))
+        try {
+            client.post(POST_ERROR) {
+                contentType(ContentType.Application.Json)
+                setBody(ErrorData(
+                    type = "client",
+                    source = "weather_tg_bot",
+                    time = System.currentTimeMillis(),
+                    description = e.localizedMessage
+                ))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return
+        }
+    }
+
+    private suspend fun sendEventToMetric(details: String) {
+        try {
+            client.post(POST_EVENT) {
+                contentType(ContentType.Application.Json)
+                setBody(
+                    EventData(
+                        type = "client",
+                        source = "weather_tg_bot",
+                        time = System.currentTimeMillis(),
+                        details = details
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return
         }
     }
 }

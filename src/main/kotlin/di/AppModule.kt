@@ -11,19 +11,23 @@ import org.novbicreate.domain.ApiRepository
 import org.novbicreate.domain.ApiRepositoryImpl
 
 val appModule = module {
-    single<ApiRepository> { ApiRepositoryImpl(
-        client = HttpClient(CIO) {
-            install(Logging) {
-                logger = Logger.DEFAULT
-                level = LogLevel.ALL
+    single<ApiRepository> {
+        ApiRepositoryImpl(
+            client = HttpClient(CIO) {
+                install(Logging) {
+                    logger = Logger.DEFAULT
+                    level = LogLevel.ALL
+                }
+                install(ContentNegotiation) {
+                    json(
+                        Json {
+                            prettyPrint = true
+                            isLenient = true
+                            ignoreUnknownKeys = true
+                        }
+                    )
+                }
             }
-            install(ContentNegotiation) {
-                json(Json {
-                    prettyPrint = true
-                    isLenient = true
-                    ignoreUnknownKeys = true
-                })
-            }
-        }
-    ) }
+        )
+    }
 }

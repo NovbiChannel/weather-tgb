@@ -5,9 +5,9 @@ import org.koin.core.context.startKoin
 import org.novbicreate.di.appModule
 
 suspend fun main() {
-    val bot = TelegramBot(System.getenv("BOT_TOKEN"))
     startKoin {
         modules(appModule)
     }
+    val bot = TelegramBot(System.getenv("BOT_TOKEN"))
     bot.handleUpdates()
 }
