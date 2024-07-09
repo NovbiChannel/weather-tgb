@@ -5,4 +5,5 @@ import org.novbicreate.utils.Resource
 
 interface ApiRepository {
     suspend fun getWeather(city: String): Resource<WeatherData>
+    suspend fun sendEvent(details: String)
 }

@@ -5,33 +5,15 @@ import eu.vendeli.tgbot.annotations.InputHandler
 import eu.vendeli.tgbot.api.message.message
 import eu.vendeli.tgbot.types.User
 import eu.vendeli.tgbot.types.internal.MessageUpdate
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.*
-import io.ktor.serialization.kotlinx.json.*
-import kotlinx.serialization.json.Json
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import org.novbicreate.controller.ControllerRoutes.MESSAGING_ROUTE
-import org.novbicreate.domain.ApiRepositoryImpl
+import org.novbicreate.domain.ApiRepository
 import org.novbicreate.domain.models.WeatherData
-import org.novbicreate.domain.sendEvent
 import org.novbicreate.utils.Resource
 
-class MessagingController {
-    private val _client = HttpClient(CIO) {
-        install(Logging) {
-            logger = Logger.DEFAULT
-            level = LogLevel.ALL
-        }
-        install(ContentNegotiation) {
-            json(Json {
-                prettyPrint = true
-                isLenient = true
-                ignoreUnknownKeys = true
-            })
-        }
-    }
-    private val _repository = ApiRepositoryImpl(_client)
+class MessagingController: KoinComponent {
+    private val _repository: ApiRepository by inject()
 
     @InputHandler([MESSAGING_ROUTE])
     suspend fun messaging(update: MessageUpdate?, user: User, bot: TelegramBot) {
@@ -47,7 +29,7 @@ class MessagingController {
                 val message = buildWeatherMessage(weather)
                 message(message).send(user, bot)
                 sendAdditionalMessage(user, bot)
-                sendEvent("Запрошена погода для города ${weather.city}", _client)
+                _repository.sendEvent("Запрошена погода для города ${weather.city}")
             }
             is Resource.Error -> sendErrorMessage(user, bot, weatherRespond.message)
         }

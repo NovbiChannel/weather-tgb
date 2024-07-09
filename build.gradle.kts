@@ -20,6 +20,7 @@ dependencies {
     implementation(libs.ktor.client.logging)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.eu.vendeli.telegramBot)
+    implementation(libs.koin.core)
     ksp(libs.eu.vendeli.ksp)
 }
 

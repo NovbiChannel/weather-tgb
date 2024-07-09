@@ -5,7 +5,9 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import org.novbicreate.domain.ApiRoutes.POST_ERROR
+import org.novbicreate.domain.ApiRoutes.POST_EVENT
 import org.novbicreate.domain.models.ErrorData
+import org.novbicreate.domain.models.EventData
 import org.novbicreate.domain.models.WeatherData
 import org.novbicreate.utils.Resource
 import java.net.ConnectException
@@ -34,6 +36,21 @@ class ApiRepositoryImpl(private val client: HttpClient): ApiRepository {
             Resource.Error(message)
         }
     }
+
+    override suspend fun sendEvent(details: String) {
+        client.post(POST_EVENT) {
+            contentType(ContentType.Application.Json)
+            setBody(
+                EventData(
+                    type = "client",
+                    source = "weather_tg_bot",
+                    time = System.currentTimeMillis(),
+                    details = details
+                )
+            )
+        }
+    }
+
     private suspend fun sendErrorToMetric(e: Exception) {
         client.post(POST_ERROR) {
             contentType(ContentType.Application.Json)
