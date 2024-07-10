@@ -4,10 +4,7 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import org.novbicreate.common.connectionErrorMessage
-import org.novbicreate.common.illegalArgumentErrorMessage
-import org.novbicreate.common.timeoutErrorMessage
-import org.novbicreate.common.unknownError
+import org.novbicreate.common.*
 import org.novbicreate.domain.ApiRoutes.GET_WEATHER
 import org.novbicreate.domain.ApiRoutes.POST_ERROR
 import org.novbicreate.domain.ApiRoutes.POST_EVENT
@@ -35,10 +32,16 @@ class ApiRepositoryImpl(private val client: HttpClient): ApiRepository {
 
     private fun handleWeatherMessage(weather: WeatherData): String {
         val conditions = weather.conditions.replaceFirstChar { it.uppercase() }
+        val conditionEmoji = weather.conditionsEmoji
         val temperature = "${weather.temperature}°C"
-        val humidity = "Влажность ${weather.humidity}%"
-        val windSpeed = if (weather.windSpeed!= 0) ", ветер ${weather.windSpeed} м/с" else ""
-        return "Погода в городе ${weather.city}: $conditions $temperature. $humidity$windSpeed"
+        val humidity = "Влажность ${weather.humidity}% \uD83D\uDCA7"
+        val windSpeed = if (weather.windSpeed!= 0) "Ветер \uD83D\uDCA8 ${weather.windSpeed} м/с" else ""
+        return "Погода в городе ${weather.city}:" +
+                "\n" +
+                "\n" +
+                "$conditions $conditionEmoji $temperature" +
+                "\n$humidity" +
+                "\n$windSpeed"
     }
 
     private fun handleErrorMessage(e: Exception): String {
