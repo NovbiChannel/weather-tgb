@@ -7,19 +7,21 @@ import eu.vendeli.tgbot.types.User
 import eu.vendeli.tgbot.types.internal.MessageUpdate
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import org.novbicreate.common.additionalMessage
+import org.novbicreate.common.MetadataCache
 import org.novbicreate.controller.ControllerRoutes.MESSAGING_ROUTE
 import org.novbicreate.domain.ApiRepository
 
 class MessagingController: KoinComponent {
     private val _repository: ApiRepository by inject()
+    private val metadataCache: MetadataCache by inject()
 
     @InputHandler([MESSAGING_ROUTE])
     suspend fun messaging(update: MessageUpdate?, user: User, bot: TelegramBot) {
-        val city = update?.text?: "Москва"
-        val message = _repository.handleWeatherMessage(city)
+        val metadata = metadataCache.getMetadata()
+        val city = update?.text?: "Moscow"
+        val message = _repository.handleWeatherMessage(city, user.languageCode)
         message(message).send(user, bot)
-        message(additionalMessage).send(user, bot)
+        message(metadata.additionalMessage).send(user, bot)
         bot.inputListener[user] = MESSAGING_ROUTE
     }
 }

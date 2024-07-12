@@ -4,22 +4,25 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import org.novbicreate.common.*
+import org.koin.core.component.KoinComponent
+import org.novbicreate.common.MetadataCache
+import org.novbicreate.domain.ApiRoutes.GET_METADATA
 import org.novbicreate.domain.ApiRoutes.GET_WEATHER
 import org.novbicreate.domain.ApiRoutes.POST_ERROR
 import org.novbicreate.domain.ApiRoutes.POST_EVENT
 import org.novbicreate.domain.models.ErrorData
 import org.novbicreate.domain.models.EventData
+import org.novbicreate.domain.models.Metadata
 import org.novbicreate.domain.models.WeatherData
 import java.net.ConnectException
 import java.util.concurrent.TimeoutException
 
 class ApiRepositoryImpl(private val client: HttpClient): ApiRepository {
-
-    override suspend fun handleWeatherMessage(city: String): String {
+    private var _metadata: Metadata? = null
+    override suspend fun handleWeatherMessage(city: String, language: String?): String {
         return try {
             val weather = client.get(GET_WEATHER) {
-                parameter("language", "russian")
+                parameter("language", language)
                 parameter("city", city)
             }.body<WeatherData>()
             sendEventToMetric("Запрошена погода для города $city")
@@ -30,13 +33,21 @@ class ApiRepositoryImpl(private val client: HttpClient): ApiRepository {
         }
     }
 
+    override suspend fun getMetaData(language: String?): Metadata {
+        val metadata = client.get(GET_METADATA) {
+            parameter("language", language)
+        }.body<Metadata>()
+        _metadata = metadata
+        return metadata
+    }
+
     private fun handleWeatherMessage(weather: WeatherData): String {
         val conditions = weather.conditions.replaceFirstChar { it.uppercase() }
         val conditionEmoji = weather.conditionsEmoji
         val temperature = "${weather.temperature}°C"
-        val humidity = "Влажность ${weather.humidity}% \uD83D\uDCA7"
-        val windSpeed = if (weather.windSpeed!= 0) "Ветер \uD83D\uDCA8 ${weather.windSpeed} м/с" else ""
-        return "Погода в городе ${weather.city}:" +
+        val humidity = "${_metadata?.humidity} ${weather.humidity}% \uD83D\uDCA7"
+        val windSpeed = if (weather.windSpeed!= 0) "${_metadata?.wind} \uD83D\uDCA8 ${weather.windSpeed} ${_metadata?.ms}" else ""
+        return "${_metadata?.weatherTitle} ${weather.city}:" +
                 "\n" +
                 "\n" +
                 "$conditions $conditionEmoji $temperature" +
@@ -47,10 +58,10 @@ class ApiRepositoryImpl(private val client: HttpClient): ApiRepository {
     private fun handleErrorMessage(e: Exception): String {
         e.printStackTrace()
         return when (e) {
-            is ConnectException -> connectionErrorMessage
-            is TimeoutException -> timeoutErrorMessage
-            is IllegalArgumentException -> illegalArgumentErrorMessage
-            else -> unknownError
+            is ConnectException -> _metadata?.connectionErrorMessage?: e.localizedMessage
+            is TimeoutException -> _metadata?.timeoutErrorMessage?: e.localizedMessage
+            is IllegalArgumentException -> _metadata?.illegalArgumentErrorMessage?: e.localizedMessage
+            else -> _metadata?.unknownError?: e.localizedMessage
         }
     }
 
