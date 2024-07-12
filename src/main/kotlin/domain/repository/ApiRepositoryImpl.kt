@@ -1,10 +1,11 @@
-package org.novbicreate.domain
+package org.novbicreate.domain.repository
 
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import org.novbicreate.common.MetadataCache
 import org.novbicreate.domain.ApiRoutes.GET_METADATA
 import org.novbicreate.domain.ApiRoutes.GET_WEATHER
@@ -17,13 +18,19 @@ import org.novbicreate.domain.models.WeatherData
 import java.net.ConnectException
 import java.util.concurrent.TimeoutException
 
-class ApiRepositoryImpl(private val client: HttpClient): ApiRepository {
-    private var _metadata: Metadata? = null
+class ApiRepositoryImpl(private val client: HttpClient): ApiRepository, KoinComponent {
+    companion object {
+        private const val LANG_PARAM = "language"
+        private const val CITY_PRAM = "city"
+    }
+    private val _metadataCache: MetadataCache by inject()
+    private var _metadata = _metadataCache.getMetadata()
+
     override suspend fun handleWeatherMessage(city: String, language: String?): String {
         return try {
             val weather = client.get(GET_WEATHER) {
-                parameter("language", language)
-                parameter("city", city)
+                parameter(LANG_PARAM, language)
+                parameter(CITY_PRAM, city)
             }.body<WeatherData>()
             sendEventToMetric("Запрошена погода для города $city")
             handleWeatherMessage(weather)
@@ -35,7 +42,7 @@ class ApiRepositoryImpl(private val client: HttpClient): ApiRepository {
 
     override suspend fun getMetaData(language: String?): Metadata {
         val metadata = client.get(GET_METADATA) {
-            parameter("language", language)
+            parameter(LANG_PARAM, language)
         }.body<Metadata>()
         _metadata = metadata
         return metadata
@@ -45,9 +52,9 @@ class ApiRepositoryImpl(private val client: HttpClient): ApiRepository {
         val conditions = weather.conditions.replaceFirstChar { it.uppercase() }
         val conditionEmoji = weather.conditionsEmoji
         val temperature = "${weather.temperature}°C"
-        val humidity = "${_metadata?.humidity} ${weather.humidity}% \uD83D\uDCA7"
-        val windSpeed = if (weather.windSpeed!= 0) "${_metadata?.wind} \uD83D\uDCA8 ${weather.windSpeed} ${_metadata?.ms}" else ""
-        return "${_metadata?.weatherTitle} ${weather.city}:" +
+        val humidity = "${_metadata.humidity} ${weather.humidity}% \uD83D\uDCA7"
+        val windSpeed = if (weather.windSpeed!= 0) "${_metadata.wind} \uD83D\uDCA8 ${weather.windSpeed} ${_metadata.ms}" else ""
+        return "${_metadata.weatherTitle} ${weather.city}:" +
                 "\n" +
                 "\n" +
                 "$conditions $conditionEmoji $temperature" +
@@ -58,10 +65,10 @@ class ApiRepositoryImpl(private val client: HttpClient): ApiRepository {
     private fun handleErrorMessage(e: Exception): String {
         e.printStackTrace()
         return when (e) {
-            is ConnectException -> _metadata?.connectionErrorMessage?: e.localizedMessage
-            is TimeoutException -> _metadata?.timeoutErrorMessage?: e.localizedMessage
-            is IllegalArgumentException -> _metadata?.illegalArgumentErrorMessage?: e.localizedMessage
-            else -> _metadata?.unknownError?: e.localizedMessage
+            is ConnectException -> _metadata.connectionErrorMessage
+            is TimeoutException -> _metadata.timeoutErrorMessage
+            is IllegalArgumentException -> _metadata.illegalArgumentErrorMessage
+            else -> _metadata.unknownError
         }
     }
 

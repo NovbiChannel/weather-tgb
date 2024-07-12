@@ -1,4 +1,4 @@
-package org.novbicreate.domain
+package org.novbicreate.domain.repository
 
 import org.novbicreate.domain.models.Metadata
 

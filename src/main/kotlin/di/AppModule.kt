@@ -8,8 +8,8 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
 import org.novbicreate.common.MetadataCache
-import org.novbicreate.domain.ApiRepository
-import org.novbicreate.domain.ApiRepositoryImpl
+import org.novbicreate.domain.repository.ApiRepository
+import org.novbicreate.domain.repository.ApiRepositoryImpl
 
 val appModule = module {
     single { HttpClient(CIO) {
@@ -27,6 +27,6 @@ val appModule = module {
             )
         }
     } }
+    single { MetadataCache(get<HttpClient>()) }
     single<ApiRepository> { ApiRepositoryImpl(get<HttpClient>()) }
-    single { MetadataCache(lazy { get<ApiRepository>() }) }
 }

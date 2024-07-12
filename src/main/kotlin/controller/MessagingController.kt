@@ -9,7 +9,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.novbicreate.common.MetadataCache
 import org.novbicreate.controller.ControllerRoutes.MESSAGING_ROUTE
-import org.novbicreate.domain.ApiRepository
+import org.novbicreate.domain.repository.ApiRepository
 
 class MessagingController: KoinComponent {
     private val _repository: ApiRepository by inject()
